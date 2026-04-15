@@ -116,12 +116,19 @@ export default function WorkflowDrillDown() {
     [setEdges]
   )
 
+  const handleUpdate = useCallback((nodeId, updatedData) => {
+    setNodes(ns => ns.map(n =>
+      n.id === nodeId ? { ...n, data: { ...n.data, ...updatedData, isNew: false } } : n
+    ))
+  }, [setNodes])
+
   const addNode = useCallback(() => {
     newNodeCounter++
+    const nodeId = String(newNodeCounter)
     const lastNode = nodes[nodes.length - 1]
     const x = lastNode ? lastNode.position.x + 290 : 0
     const newNode = {
-      id: String(newNodeCounter),
+      id: nodeId,
       type: 'workflowNode',
       position: { x, y: 120 },
       data: {
@@ -129,12 +136,14 @@ export default function WorkflowDrillDown() {
         tool: 'Manual',
         status: 'manual',
         weeklyHours: 0,
-        description: 'Describe what happens in this step',
+        description: '',
+        isNew: true,
         onRename: handleRename,
         onDelete: handleDelete,
       },
     }
     setNodes(ns => [...ns, newNode])
+    setSelectedNodeId(nodeId)
   }, [nodes, handleRename, handleDelete, setNodes])
 
   if (!workflow) {
@@ -316,9 +325,11 @@ export default function WorkflowDrillDown() {
             {/* Node detail panel */}
             {selectedNodeId && (
               <NodePanel
+                nodeId={selectedNodeId}
                 step={selectedStep}
                 workflow={workflow}
                 onClose={() => setSelectedNodeId(null)}
+                onUpdate={handleUpdate}
               />
             )}
           </>
