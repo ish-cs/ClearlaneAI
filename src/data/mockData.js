@@ -11,6 +11,8 @@ export const workflows = [
     status: 'partial',
     conversionRate: 31,
     avgCycleTimeDays: 18,
+    trend: 'improving',
+    baseline: { aiScore: 45, weeklyHours: 24, manualSteps: 3, avgCycleTimeDays: 24 },
     bottlenecks: [
       { name: 'Follow-Up Wait Time', severity: 'high', impact: '2.5 day avg delay', step: 'Follow-up Sequences' },
       { name: 'Manual Reply Tracking', severity: 'medium', impact: '6h/week wasted', step: 'Reply Tracking' },
@@ -28,6 +30,8 @@ export const workflows = [
     status: 'needs-attention',
     conversionRate: 94,
     avgCycleTimeDays: 12,
+    trend: 'worsening',
+    baseline: { aiScore: 28, weeklyHours: 22, manualSteps: 4, avgCycleTimeDays: 14 },
     bottlenecks: [
       { name: 'Manual Data Entry', severity: 'high', impact: '7h/week wasted', step: 'Data Extraction' },
       { name: 'Approval Bottleneck', severity: 'high', impact: '3 day avg delay', step: 'Approval Routing' },
@@ -46,6 +50,8 @@ export const workflows = [
     status: 'optimized',
     conversionRate: 87,
     avgCycleTimeDays: 7,
+    trend: 'improving',
+    baseline: { aiScore: 68, weeklyHours: 16, manualSteps: 2, avgCycleTimeDays: 11 },
     bottlenecks: [
       { name: 'Manual Check-ins', severity: 'low', impact: '4h/week', step: 'Progress Check-ins' },
     ],
@@ -62,6 +68,8 @@ export const workflows = [
     status: 'partial',
     conversionRate: 72,
     avgCycleTimeDays: 5,
+    trend: 'stable',
+    baseline: { aiScore: 50, weeklyHours: 14, manualSteps: 2, avgCycleTimeDays: 5 },
     bottlenecks: [
       { name: 'Editorial Review Delay', severity: 'high', impact: '6h/week per piece', step: 'Editorial Review' },
       { name: 'Manual Asset Creation', severity: 'medium', impact: '4h/week', step: 'Asset Creation' },
@@ -79,6 +87,8 @@ export const workflows = [
     status: 'partial',
     conversionRate: 91,
     avgCycleTimeDays: 2,
+    trend: 'improving',
+    baseline: { aiScore: 55, weeklyHours: 28, manualSteps: 2, avgCycleTimeDays: 3 },
     bottlenecks: [
       { name: 'Escalation Chaos', severity: 'high', impact: '4hr avg resolution delay', step: 'Escalation Handling' },
     ],
@@ -95,6 +105,8 @@ export const workflows = [
     status: 'needs-attention',
     conversionRate: 8,
     avgCycleTimeDays: 42,
+    trend: 'worsening',
+    baseline: { aiScore: 18, weeklyHours: 28, manualSteps: 6, avgCycleTimeDays: 38 },
     bottlenecks: [
       { name: 'Manual Resume Review', severity: 'high', impact: '8h/week per open role', step: 'Resume Screening' },
       { name: 'Scheduling Back-and-Forth', severity: 'high', impact: '5h/week', step: 'Interview Scheduling' },
@@ -119,6 +131,7 @@ export const workflowSteps = {
       weeklyVolume: 420,
       volumeUnit: 'leads',
       dropoffPct: null,
+      trend: 'improving',
     },
     {
       id: 2,
@@ -133,6 +146,7 @@ export const workflowSteps = {
       weeklyVolume: 380,
       volumeUnit: 'emails',
       dropoffPct: 10,
+      trend: 'stable',
     },
     {
       id: 3,
@@ -147,6 +161,7 @@ export const workflowSteps = {
       weeklyVolume: 1562,
       volumeUnit: 'sends',
       dropoffPct: null,
+      trend: 'stable',
     },
     {
       id: 4,
@@ -161,6 +176,7 @@ export const workflowSteps = {
       weeklyVolume: 186,
       volumeUnit: 'replies',
       dropoffPct: 88,
+      trend: 'worsening',
       recommendation: {
         tool: 'Superhuman + Clay',
         vs: 'Manual (Gmail)',
@@ -185,6 +201,7 @@ export const workflowSteps = {
       weeklyVolume: 124,
       volumeUnit: 'sequences',
       dropoffPct: 33,
+      trend: 'worsening',
       recommendation: {
         tool: 'Lemlist',
         vs: 'Manual outreach',
@@ -211,6 +228,7 @@ export const workflowSteps = {
       weeklyVolume: 250,
       volumeUnit: 'invoices',
       dropoffPct: null,
+      trend: 'stable',
       recommendation: {
         tool: 'Docsumo',
         vs: 'Email/manual collection',
@@ -235,6 +253,7 @@ export const workflowSteps = {
       weeklyVolume: 250,
       volumeUnit: 'invoices',
       dropoffPct: null,
+      trend: 'worsening',
       recommendation: {
         tool: 'Rossum AI',
         vs: 'Manual Excel entry',
@@ -259,6 +278,7 @@ export const workflowSteps = {
       weeklyVolume: 250,
       volumeUnit: 'approvals',
       dropoffPct: null,
+      trend: 'stable',
       recommendation: {
         tool: 'Airbase',
         vs: 'Email approval chains',
@@ -283,6 +303,7 @@ export const workflowSteps = {
       weeklyVolume: 250,
       volumeUnit: 'invoices',
       dropoffPct: null,
+      trend: 'stable',
       recommendation: {
         tool: 'Vic.ai',
         vs: 'Manual QuickBooks coding',
@@ -307,6 +328,7 @@ export const workflowSteps = {
       weeklyVolume: 245,
       volumeUnit: 'payments',
       dropoffPct: 2,
+      trend: 'stable',
     },
     {
       id: 6,
@@ -321,6 +343,7 @@ export const workflowSteps = {
       weeklyVolume: 245,
       volumeUnit: 'entries',
       dropoffPct: null,
+      trend: 'stable',
     },
   ],
   3: [
@@ -337,6 +360,7 @@ export const workflowSteps = {
       weeklyVolume: 480,
       volumeUnit: 'customers',
       dropoffPct: null,
+      trend: 'improving',
     },
     {
       id: 2,
@@ -351,6 +375,7 @@ export const workflowSteps = {
       weeklyVolume: 480,
       volumeUnit: 'accounts',
       dropoffPct: null,
+      trend: 'improving',
     },
     {
       id: 3,
@@ -365,6 +390,7 @@ export const workflowSteps = {
       weeklyVolume: 462,
       volumeUnit: 'users',
       dropoffPct: 4,
+      trend: 'stable',
     },
     {
       id: 4,
@@ -379,6 +405,7 @@ export const workflowSteps = {
       weeklyVolume: 440,
       volumeUnit: 'bundles',
       dropoffPct: 5,
+      trend: 'stable',
     },
     {
       id: 5,
@@ -393,6 +420,7 @@ export const workflowSteps = {
       weeklyVolume: 440,
       volumeUnit: 'bookings',
       dropoffPct: null,
+      trend: 'stable',
     },
     {
       id: 6,
@@ -407,6 +435,7 @@ export const workflowSteps = {
       weeklyVolume: 440,
       volumeUnit: 'check-ins',
       dropoffPct: null,
+      trend: 'stable',
       recommendation: {
         tool: 'ChurnZero',
         vs: 'Manual Slack DMs',
@@ -431,6 +460,7 @@ export const workflowSteps = {
       weeklyVolume: 418,
       volumeUnit: 'handoffs',
       dropoffPct: 5,
+      trend: 'stable',
     },
   ],
   4: [
@@ -447,6 +477,7 @@ export const workflowSteps = {
       weeklyVolume: 100,
       volumeUnit: 'pieces',
       dropoffPct: null,
+      trend: 'stable',
     },
     {
       id: 2,
@@ -461,6 +492,7 @@ export const workflowSteps = {
       weeklyVolume: 100,
       volumeUnit: 'drafts',
       dropoffPct: null,
+      trend: 'improving',
     },
     {
       id: 3,
@@ -475,6 +507,7 @@ export const workflowSteps = {
       weeklyVolume: 100,
       volumeUnit: 'pieces',
       dropoffPct: null,
+      trend: 'stable',
       recommendation: {
         tool: 'Grammarly Business',
         vs: 'Manual editing',
@@ -499,6 +532,7 @@ export const workflowSteps = {
       weeklyVolume: 100,
       volumeUnit: 'asset sets',
       dropoffPct: null,
+      trend: 'stable',
       recommendation: {
         tool: 'Canva AI',
         vs: 'Manual Figma work',
@@ -523,6 +557,7 @@ export const workflowSteps = {
       weeklyVolume: 72,
       volumeUnit: 'posts',
       dropoffPct: 28,
+      trend: 'stable',
     },
   ],
   5: [
@@ -539,6 +574,7 @@ export const workflowSteps = {
       weeklyVolume: 2200,
       volumeUnit: 'tickets',
       dropoffPct: null,
+      trend: 'improving',
     },
     {
       id: 2,
@@ -553,6 +589,7 @@ export const workflowSteps = {
       weeklyVolume: 2200,
       volumeUnit: 'tickets',
       dropoffPct: null,
+      trend: 'stable',
     },
     {
       id: 3,
@@ -567,6 +604,7 @@ export const workflowSteps = {
       weeklyVolume: 2200,
       volumeUnit: 'responses',
       dropoffPct: null,
+      trend: 'stable',
     },
     {
       id: 4,
@@ -581,6 +619,7 @@ export const workflowSteps = {
       weeklyVolume: 2200,
       volumeUnit: 'escalations',
       dropoffPct: null,
+      trend: 'worsening',
       recommendation: {
         tool: 'Linear + Zapier',
         vs: 'Manual Slack threads',
@@ -607,6 +646,7 @@ export const workflowSteps = {
       weeklyVolume: 4,
       volumeUnit: 'JDs',
       dropoffPct: null,
+      trend: 'stable',
       recommendation: {
         tool: 'Textio',
         vs: 'Google Docs from scratch',
@@ -631,6 +671,7 @@ export const workflowSteps = {
       weeklyVolume: 4,
       volumeUnit: 'postings',
       dropoffPct: null,
+      trend: 'stable',
       recommendation: {
         tool: 'Multipost',
         vs: 'Manual board posting',
@@ -655,6 +696,7 @@ export const workflowSteps = {
       weeklyVolume: 100,
       volumeUnit: 'resumes',
       dropoffPct: null,
+      trend: 'worsening',
       recommendation: {
         tool: 'Ashby AI',
         vs: 'Manual email screening',
@@ -679,6 +721,7 @@ export const workflowSteps = {
       weeklyVolume: 100,
       volumeUnit: 'candidates',
       dropoffPct: 40,
+      trend: 'worsening',
       recommendation: {
         tool: 'Calendly for Teams',
         vs: 'Email back-and-forth',
@@ -703,6 +746,7 @@ export const workflowSteps = {
       weeklyVolume: 60,
       volumeUnit: 'assessments',
       dropoffPct: 40,
+      trend: 'stable',
     },
     {
       id: 6,
@@ -717,6 +761,7 @@ export const workflowSteps = {
       weeklyVolume: 40,
       volumeUnit: 'checks',
       dropoffPct: 33,
+      trend: 'stable',
       recommendation: {
         tool: 'Checkr + SkillSurvey',
         vs: 'Manual phone calls',
@@ -741,6 +786,7 @@ export const workflowSteps = {
       weeklyVolume: 30,
       volumeUnit: 'letters',
       dropoffPct: 25,
+      trend: 'stable',
     },
     {
       id: 8,
@@ -755,6 +801,7 @@ export const workflowSteps = {
       weeklyVolume: 30,
       volumeUnit: 'hires',
       dropoffPct: null,
+      trend: 'stable',
       recommendation: {
         tool: 'Rippling',
         vs: 'Manual Slack DMs',
@@ -785,6 +832,7 @@ export const dataSources = [
     category: 'Lead Intelligence',
     status: 'connected',
     lastSync: '3 min ago',
+    confidenceScore: 94,
     dataProvided: ['Lead profiles', 'Company data', 'Email validation', 'Intent signals'],
     color: '#FF6B35',
     usedInWorkflows: [{ workflowId: 1, stepName: 'Lead Generation' }],
@@ -795,6 +843,7 @@ export const dataSources = [
     category: 'AI Writing',
     status: 'connected',
     lastSync: '1 min ago',
+    confidenceScore: 98,
     dataProvided: ['Generated copy', 'Email drafts', 'Content summaries', 'Scoring logic'],
     color: '#10A37F',
     usedInWorkflows: [{ workflowId: 1, stepName: 'Email Copywriting' }, { workflowId: 4, stepName: 'Draft Writing' }],
@@ -805,6 +854,7 @@ export const dataSources = [
     category: 'Email Automation',
     status: 'connected',
     lastSync: '5 min ago',
+    confidenceScore: 91,
     dataProvided: ['Send sequences', 'Delivery stats', 'Reply detection', 'Warmup data'],
     color: '#6366F1',
     usedInWorkflows: [{ workflowId: 1, stepName: 'Email Sending' }],
@@ -815,6 +865,7 @@ export const dataSources = [
     category: 'Email',
     status: 'syncing',
     lastSync: 'syncing...',
+    confidenceScore: 62,
     dataProvided: ['Inbound emails', 'Reply threads', 'Contact history'],
     color: '#EA4335',
     usedInWorkflows: [{ workflowId: 1, stepName: 'Reply Tracking' }],
@@ -825,6 +876,7 @@ export const dataSources = [
     category: 'CRM',
     status: 'connected',
     lastSync: '12 min ago',
+    confidenceScore: 88,
     dataProvided: ['Contact records', 'Deal pipeline', 'Email sequences', 'Analytics'],
     color: '#FF7A59',
     usedInWorkflows: [{ workflowId: 3, stepName: 'Welcome Email' }],
@@ -835,6 +887,7 @@ export const dataSources = [
     category: 'Support Platform',
     status: 'connected',
     lastSync: '2 min ago',
+    confidenceScore: 96,
     dataProvided: ['Ticket data', 'Agent queues', 'Customer history', 'AI classifications'],
     color: '#03363D',
     usedInWorkflows: [{ workflowId: 5, stepName: 'Ticket Intake' }, { workflowId: 5, stepName: 'Priority Routing' }],
@@ -845,6 +898,7 @@ export const dataSources = [
     category: 'CRM',
     status: 'error',
     lastSync: '2h ago',
+    confidenceScore: 0,
     dataProvided: ['Opportunity data', 'Account records', 'Activity history'],
     color: '#00A1E0',
     usedInWorkflows: [{ workflowId: 3, stepName: 'Handoff to Success' }],
@@ -855,6 +909,7 @@ export const dataSources = [
     category: 'Finance',
     status: 'connected',
     lastSync: '18 min ago',
+    confidenceScore: 85,
     dataProvided: ['Invoice records', 'GL codes', 'Payment history', 'Vendor data'],
     color: '#2CA01C',
     usedInWorkflows: [{ workflowId: 2, stepName: 'GL Coding' }, { workflowId: 2, stepName: 'Reconciliation' }],
@@ -865,6 +920,7 @@ export const dataSources = [
     category: 'ATS',
     status: 'connected',
     lastSync: '45 min ago',
+    confidenceScore: 79,
     dataProvided: ['Candidate profiles', 'Interview scorecards', 'Job requisitions'],
     color: '#24A47F',
     usedInWorkflows: [{ workflowId: 6, stepName: 'Candidate Assessment' }],
@@ -875,6 +931,7 @@ export const dataSources = [
     category: 'Customer Messaging',
     status: 'connected',
     lastSync: '4 min ago',
+    confidenceScore: 93,
     dataProvided: ['User conversations', 'In-app events', 'Support tickets', 'User segments'],
     color: '#1F8DED',
     usedInWorkflows: [{ workflowId: 3, stepName: 'Product Walkthrough' }, { workflowId: 5, stepName: 'First Response' }],
@@ -885,6 +942,7 @@ export const dataSources = [
     category: 'Knowledge Base',
     status: 'connected',
     lastSync: '30 min ago',
+    confidenceScore: 76,
     dataProvided: ['Training materials', 'Knowledge articles', 'Onboarding docs'],
     color: '#000000',
     usedInWorkflows: [{ workflowId: 3, stepName: 'Training Materials' }],
@@ -895,6 +953,7 @@ export const dataSources = [
     category: 'Research',
     status: 'connected',
     lastSync: '8 min ago',
+    confidenceScore: 87,
     dataProvided: ['Topic research', 'Competitive analysis', 'Trend signals'],
     color: '#20808D',
     usedInWorkflows: [{ workflowId: 4, stepName: 'Topic Research' }],
@@ -916,3 +975,51 @@ export const industryBenchmarks = {
   aiAdoptionScore: { yours: 55, industry: 62, label: 'AI adoption score', unit: '%', lowerIsBetter: false },
   weeklyHoursSaved: { yours: 31, industry: 38, label: 'Hours saved / week', unit: 'h', lowerIsBetter: false },
 }
+
+export const recentAlerts = [
+  { id: 1, severity: 'high', workflow: 'Invoice Processing', workflowId: 2, message: 'Manual Data Entry hours rose 15% this week', timestamp: '2h ago' },
+  { id: 2, severity: 'high', workflow: 'Recruiting Pipeline', workflowId: 6, message: 'Interview Scheduling drop-off reached 40%', timestamp: '5h ago' },
+  { id: 3, severity: 'medium', workflow: 'Sales Outreach', workflowId: 1, message: 'Reply Tracking cost exceeded monthly budget', timestamp: '1d ago' },
+  { id: 4, severity: 'low', workflow: 'Customer Onboarding', workflowId: 3, message: 'Progress Check-in volume increased 12%', timestamp: '2d ago' },
+]
+
+// Derived: all opportunities ranked by annual saving
+export const topOpportunities = Object.entries(workflowSteps)
+  .flatMap(([wfId, steps]) => {
+    const wf = workflows.find(w => w.id === Number(wfId))
+    return steps.filter(s => s.recommendation).map(s => ({
+      workflowId: Number(wfId),
+      workflow: wf?.name,
+      dept: wf?.department,
+      stepName: s.name,
+      tool: s.recommendation.tool,
+      upliftLabel: s.recommendation.upliftLabel,
+      effort: s.recommendation.effort,
+      hourlySaving: s.recommendation.hourlySaving,
+      annualSaving: s.recommendation.annualSaving,
+      timeToLive: s.recommendation.timeToLive,
+    }))
+  })
+  .sort((a, b) => b.annualSaving - a.annualSaving)
+
+// Derived: weekly digest insights
+const _lowestScored = workflows.reduce((min, w) => w.aiScore < min.aiScore ? w : min)
+const _lowestSteps = workflowSteps[_lowestScored.id] || []
+const _lowestManual = _lowestSteps.filter(s => s.status === 'manual').length
+
+const _mostManualWf = workflows.reduce((max, w) => {
+  const hrs = (workflowSteps[w.id] || []).filter(s => s.status === 'manual').reduce((s, st) => s + st.weeklyHours, 0)
+  const maxHrs = (workflowSteps[max.id] || []).filter(s => s.status === 'manual').reduce((s, st) => s + st.weeklyHours, 0)
+  return hrs > maxHrs ? w : max
+})
+const _mostManualHrs = (workflowSteps[_mostManualWf.id] || []).filter(s => s.status === 'manual').reduce((s, st) => s + st.weeklyHours, 0)
+const _mostManualCount = (workflowSteps[_mostManualWf.id] || []).filter(s => s.status === 'manual').length
+
+const _bestPerforming = workflows.reduce((max, w) => w.aiScore > max.aiScore ? w : max)
+
+export const weeklyInsights = [
+  `${_lowestScored.name} remains the lowest-scored workflow at ${_lowestScored.aiScore}% — ${_lowestManual} of ${_lowestSteps.length} steps are fully manual.`,
+  `${_mostManualWf.name} has the most manual steps (${_mostManualCount}) and highest time cost at ${_mostManualHrs} hrs/week.`,
+  `${_bestPerforming.name} reached ${_bestPerforming.aiScore}% AI adoption — the best-performing workflow this period.`,
+  `Company-wide AI adoption is at ${roiSummary.currentAiScore}%, up from ${roiSummary.weeklyTrend[0]}% over the tracking period.`,
+]

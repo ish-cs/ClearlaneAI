@@ -30,7 +30,6 @@ export default function NodePanel({ nodeId, step, workflow, onClose, onUpdate })
   const [editing, setEditing] = useState(isNew)
   const [activeTool, setActiveTool] = useState(null)
 
-  // Edit form state
   const [form, setForm] = useState({
     name:        step?.name        ?? '',
     description: step?.description ?? '',
@@ -70,6 +69,9 @@ export default function NodePanel({ nodeId, step, workflow, onClose, onUpdate })
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
+  // Fix #20: disable save when name is blank
+  const canSave = form.name.trim() !== ''
+
   return (
     <div
       className="absolute top-0 right-0 h-full flex flex-col bg-sidebar border-l border-white/[0.06] z-20"
@@ -92,7 +94,19 @@ export default function NodePanel({ nodeId, step, workflow, onClose, onUpdate })
         <div className="flex items-center gap-1.5 flex-shrink-0">
           {!isNew && (
             <button
-              onClick={() => { setEditing(e => !e); setForm({ name: step.name, description: step.description ?? '', tool: step.tool ?? '', status: step.status ?? 'manual', weeklyHours: step.weeklyHours ?? 0, monthlyCost: step.monthlyCost ?? '', weeklyVolume: step.weeklyVolume ?? '', volumeUnit: step.volumeUnit ?? '' }) }}
+              onClick={() => {
+                setEditing(e => !e)
+                setForm({
+                  name: step.name,
+                  description: step.description ?? '',
+                  tool: step.tool ?? '',
+                  status: step.status ?? 'manual',
+                  weeklyHours: step.weeklyHours ?? 0,
+                  monthlyCost: step.monthlyCost ?? '',
+                  weeklyVolume: step.weeklyVolume ?? '',
+                  volumeUnit: step.volumeUnit ?? '',
+                })
+              }}
               className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${editing ? 'bg-teal/15 text-teal' : 'bg-white/[0.05] hover:bg-white/[0.08] text-white/40'}`}
               title="Edit step"
             >
@@ -180,9 +194,15 @@ export default function NodePanel({ nodeId, step, workflow, onClose, onUpdate })
               </div>
             </div>
 
+            {/* Fix #20: disabled when name empty */}
             <button
               onClick={handleSave}
-              className="w-full py-2.5 rounded-xl bg-teal text-sidebar text-sm font-semibold hover:bg-teal/90 transition-colors"
+              disabled={!canSave}
+              className={`w-full py-2.5 rounded-xl text-sm font-semibold transition-colors ${
+                canSave
+                  ? 'bg-teal text-sidebar hover:bg-teal/90'
+                  : 'bg-white/[0.05] text-white/20 cursor-not-allowed'
+              }`}
             >
               {isNew ? 'Add to workflow' : 'Save changes'}
             </button>
@@ -195,7 +215,42 @@ export default function NodePanel({ nodeId, step, workflow, onClose, onUpdate })
         ) : (
           /* ── READ MODE ── */
           <div className="px-5 py-4 space-y-5">
-            <p className="text-sm text-white/45 leading-relaxed">{step.description}</p>
+            {step.description && (
+              <p className="text-sm text-white/45 leading-relaxed">{step.description}</p>
+            )}
+
+            {/* Recommendation — shown first for actionability */}
+            {step.recommendation && (
+              <div>
+                <p className="text-[10px] font-semibold text-white/25 uppercase tracking-widest mb-2">Recommendation</p>
+                <div className="bg-teal/[0.06] border border-teal/15 rounded-xl p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold text-teal">{step.recommendation.tool}</span>
+                    {step.recommendation.upliftLabel && (
+                      <span className="text-[10px] font-semibold text-teal bg-teal/10 border border-teal/20 rounded-full px-2 py-0.5">
+                        {step.recommendation.upliftLabel}
+                      </span>
+                    )}
+                  </div>
+                  {step.recommendation.rationale && (
+                    <p className="text-xs text-white/40 leading-relaxed">{step.recommendation.rationale}</p>
+                  )}
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/[0.05]">
+                    {[
+                      ['Save/week', `${step.recommendation.hourlySaving}h`],
+                      ['Annual',    `$${step.recommendation.annualSaving?.toLocaleString() ?? '—'}`],
+                      ['Effort',    step.recommendation.effort],
+                      ['Live in',   step.recommendation.timeToLive ?? '—'],
+                    ].map(([k, v]) => (
+                      <div key={k}>
+                        <p className="text-[9px] text-white/25 uppercase tracking-wider mb-0.5">{k}</p>
+                        <p className="text-xs font-mono font-semibold text-white/70">{v}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Metrics */}
             <div>
@@ -243,55 +298,32 @@ export default function NodePanel({ nodeId, step, workflow, onClose, onUpdate })
                   <path d="M2 4l4 4 4-4" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" strokeLinecap="round"/>
                 </svg>
               </button>
-              {activeTool === step.tool && stepSources.length > 0 && (
-                <div className="mt-2 bg-teal/[0.05] border border-teal/15 rounded-xl p-3.5 space-y-2">
-                  {stepSources.map(src => (
-                    <div key={src.id}>
-                      <p className="text-xs font-semibold text-teal mb-1">{src.name}</p>
-                      <p className="text-[10px] text-white/30 mb-2">{src.category}</p>
-                      <div className="flex flex-wrap gap-1">
-                        {src.dataProvided.map(d => (
-                          <span key={d} className="text-[9px] text-white/40 bg-white/[0.04] border border-white/[0.06] rounded px-1.5 py-0.5">{d}</span>
-                        ))}
-                      </div>
+
+              {activeTool === step.tool && (
+                <div className="mt-2">
+                  {stepSources.length > 0 ? (
+                    <div className="bg-teal/[0.05] border border-teal/15 rounded-xl p-3.5 space-y-2">
+                      {stepSources.map(src => (
+                        <div key={src.id}>
+                          <p className="text-xs font-semibold text-teal mb-1">{src.name}</p>
+                          <p className="text-[10px] text-white/30 mb-2">{src.category}</p>
+                          <div className="flex flex-wrap gap-1">
+                            {src.dataProvided.map(d => (
+                              <span key={d} className="text-[9px] text-white/40 bg-white/[0.04] border border-white/[0.06] rounded px-1.5 py-0.5">{d}</span>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  ) : (
+                    /* Fix #9: empty state */
+                    <div className="bg-white/[0.02] border border-white/[0.05] rounded-xl p-3.5 text-center">
+                      <p className="text-xs text-white/25">No connected data source for this tool</p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
-
-            {/* Recommendation */}
-            {step.recommendation && (
-              <div>
-                <p className="text-[10px] font-semibold text-white/25 uppercase tracking-widest mb-2">Recommendation</p>
-                <div className="bg-teal/[0.06] border border-teal/15 rounded-xl p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold text-teal">{step.recommendation.tool}</span>
-                    {step.recommendation.upliftLabel && (
-                      <span className="text-[10px] font-semibold text-teal bg-teal/10 border border-teal/20 rounded-full px-2 py-0.5">
-                        {step.recommendation.upliftLabel}
-                      </span>
-                    )}
-                  </div>
-                  {step.recommendation.rationale && (
-                    <p className="text-xs text-white/40 leading-relaxed">{step.recommendation.rationale}</p>
-                  )}
-                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/[0.05]">
-                    {[
-                      ['Save/week', `${step.recommendation.hourlySaving}h`],
-                      ['Annual',    `$${step.recommendation.annualSaving.toLocaleString()}`],
-                      ['Effort',    step.recommendation.effort],
-                      ['Live in',   step.recommendation.timeToLive ?? '—'],
-                    ].map(([k, v]) => (
-                      <div key={k}>
-                        <p className="text-[9px] text-white/25 uppercase tracking-wider mb-0.5">{k}</p>
-                        <p className="text-xs font-mono font-semibold text-white/70">{v}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         )}
       </div>

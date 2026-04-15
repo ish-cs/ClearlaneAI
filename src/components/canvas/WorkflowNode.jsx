@@ -1,10 +1,16 @@
-import { memo, useState, useCallback } from 'react'
+import { memo, useState, useCallback, useEffect } from 'react'
 import { Handle, Position } from '@xyflow/react'
 
 const statusMap = {
   ai:      { border: '#00C9A7', bg: 'rgba(0,201,167,0.07)',  dot: '#00C9A7', label: 'AI',     text: '#00C9A7' },
   partial: { border: '#F59E0B', bg: 'rgba(245,158,11,0.07)', dot: '#F59E0B', label: 'Hybrid',  text: '#F59E0B' },
   manual:  { border: '#EF4444', bg: 'rgba(239,68,68,0.07)',  dot: '#EF4444', label: 'Manual',  text: '#EF4444' },
+}
+
+const trendMap = {
+  improving: { icon: '↑', color: '#00C9A7' },
+  stable:    { icon: '→', color: 'rgba(255,255,255,0.25)' },
+  worsening: { icon: '↓', color: '#EF4444' },
 }
 
 function OptScore({ score, color }) {
@@ -32,15 +38,21 @@ function getScore(status, weeklyHours = 4) {
 }
 
 export default memo(function WorkflowNode({ data, selected, id }) {
-  const [editing, setEditing] = useState(false)
-  const [name, setName]       = useState(data.name)
-  const cfg = statusMap[data.status] ?? statusMap.manual
+  const [editing, setEditing]   = useState(false)
+  const [localName, setLocalName] = useState(data.name)
+  const cfg   = statusMap[data.status] ?? statusMap.manual
   const score = getScore(data.status, data.weeklyHours)
+  const trend = trendMap[data.trend]
+
+  // Fix #2: sync local name when data.name changes externally (after save)
+  useEffect(() => {
+    if (!editing) setLocalName(data.name)
+  }, [data.name, editing])
 
   const commitName = useCallback(() => {
     setEditing(false)
-    data.onRename?.(id, name)
-  }, [id, name, data])
+    data.onRename?.(id, localName)
+  }, [id, localName, data])
 
   const fmtVol = v => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(v)
 
@@ -68,6 +80,11 @@ export default memo(function WorkflowNode({ data, selected, id }) {
             <span style={{ color: cfg.text, fontSize: 9, fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase' }}>
               {cfg.label}
             </span>
+            {trend && (
+              <span style={{ fontSize: 10, fontWeight: 700, color: trend.color, marginLeft: 2 }} title={data.trend}>
+                {trend.icon}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-1.5">
             <OptScore score={score} color={cfg.border} />
@@ -90,8 +107,8 @@ export default memo(function WorkflowNode({ data, selected, id }) {
         {editing ? (
           <input
             autoFocus
-            value={name}
-            onChange={e => setName(e.target.value)}
+            value={localName}
+            onChange={e => setLocalName(e.target.value)}
             onBlur={commitName}
             onKeyDown={e => { if (e.key === 'Enter') commitName(); e.stopPropagation() }}
             className="w-full bg-white/[0.06] border border-white/10 rounded px-1.5 py-0.5 text-sm font-semibold text-white outline-none mb-2"
@@ -104,18 +121,20 @@ export default memo(function WorkflowNode({ data, selected, id }) {
             onDoubleClick={e => { e.stopPropagation(); setEditing(true) }}
             title="Double-click to rename"
           >
-            {name}
+            {localName}
           </p>
         )}
 
-        {/* Description */}
-        <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.32)', lineHeight: 1.5, marginBottom: 10,
-          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-          {data.description}
-        </p>
+        {/* Fix #19: only render description if non-empty */}
+        {data.description && (
+          <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.32)', lineHeight: 1.5, marginBottom: 10,
+            display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+            {data.description}
+          </p>
+        )}
 
         {/* Tool + metrics row */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between" style={{ marginTop: data.description ? 0 : 8 }}>
           <span style={{
             fontSize: 9, fontWeight: 600, color: 'rgba(255,255,255,0.38)',
             background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)',
@@ -142,11 +161,11 @@ export default memo(function WorkflowNode({ data, selected, id }) {
           </div>
         )}
 
-        {/* Cost */}
-        {data.monthlyCost != null && (
+        {/* Fix #4: only show cost row when costPerUnit is non-null */}
+        {data.monthlyCost != null && data.costPerUnit != null && (
           <div style={{ marginTop: 6, fontSize: 9, color: 'rgba(255,255,255,0.18)',
             fontFamily: 'JetBrains Mono, monospace' }}>
-            ${data.monthlyCost}/mo · ${data.costPerUnit?.toFixed(2)} {data.unitLabel}
+            ${data.monthlyCost}/mo · ${data.costPerUnit.toFixed(2)} {data.unitLabel}
           </div>
         )}
       </div>

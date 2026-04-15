@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   ReactFlow, Background, Controls, MiniMap,
@@ -26,7 +26,7 @@ function edgeColor(status) {
   return 'rgba(0,201,167,0.45)'
 }
 
-function buildFlow(steps, bottlenecks, showBottlenecks, onRename, onDelete) {
+function buildFlow(steps, bottlenecks, onRename, onDelete) {
   const bottleneckStepNames = new Set(bottlenecks?.map(b => b.step) ?? [])
 
   const nodes = steps.map((step, i) => ({
@@ -39,8 +39,6 @@ function buildFlow(steps, bottlenecks, showBottlenecks, onRename, onDelete) {
       onRename,
       onDelete,
     },
-    style: showBottlenecks && !bottleneckStepNames.has(step.name)
-      ? { opacity: 0.3 } : {},
   }))
 
   const edges = steps.slice(0, -1).map((step, i) => {
@@ -77,14 +75,15 @@ export default function WorkflowDrillDown() {
   const [selectedNodeId,  setSelectedNodeId]  = useState(null)
   const [showBottlenecks, setShowBottlenecks] = useState(false)
 
-  // Rename handler — updates node data.name in place
+  // Fix #12: track drag to suppress click-after-drag
+  const draggingRef = useRef(false)
+
   const handleRename = useCallback((nodeId, newName) => {
     setNodes(ns => ns.map(n =>
       n.id === nodeId ? { ...n, data: { ...n.data, name: newName } } : n
     ))
   }, [])
 
-  // Delete handler
   const handleDelete = useCallback((nodeId) => {
     setNodes(ns => ns.filter(n => n.id !== nodeId))
     setEdges(es => es.filter(e => e.source !== nodeId && e.target !== nodeId))
@@ -92,7 +91,7 @@ export default function WorkflowDrillDown() {
   }, [])
 
   const { nodes: initNodes, edges: initEdges } = useMemo(() =>
-    buildFlow(rawSteps, workflow?.bottlenecks, false, handleRename, handleDelete),
+    buildFlow(rawSteps, workflow?.bottlenecks, handleRename, handleDelete),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [id]
   )
@@ -100,7 +99,6 @@ export default function WorkflowDrillDown() {
   const [nodes, setNodes, onNodesChange] = useNodesState(initNodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(initEdges)
 
-  // Re-apply bottleneck filter when toggle changes
   const visibleNodes = useMemo(() => {
     const bottleneckNames = new Set(workflow?.bottlenecks?.map(b => b.step) ?? [])
     return nodes.map(n => ({
@@ -115,6 +113,11 @@ export default function WorkflowDrillDown() {
     setEdges(es => addEdge({ ...params, style: { stroke: 'rgba(0,201,167,0.4)', strokeWidth: 1.5 } }, es)),
     [setEdges]
   )
+
+  // Fix #1: resolve selectedStep from live node data, not rawSteps
+  const selectedStep = selectedNodeId
+    ? nodes.find(n => n.id === selectedNodeId)?.data ?? null
+    : null
 
   const handleUpdate = useCallback((nodeId, updatedData) => {
     setNodes(ns => ns.map(n =>
@@ -150,15 +153,16 @@ export default function WorkflowDrillDown() {
     return <div className="flex items-center justify-center h-64 text-white/30">Workflow not found.</div>
   }
 
-  const selectedStep = selectedNodeId
-    ? rawSteps.find(s => String(s.id) === selectedNodeId) ??
-      nodes.find(n => n.id === selectedNodeId)?.data
-    : null
+  // Top opportunities for this workflow
+  const workflowOpps = rawSteps
+    .filter(s => s.recommendation)
+    .map(s => ({ stepName: s.name, ...s.recommendation }))
+    .sort((a, b) => b.annualSaving - a.annualSaving)
 
   // Top metrics
-  const manualHrs = rawSteps.filter(s => s.status === 'manual').reduce((s, st) => s + st.weeklyHours, 0)
-  const savedHrs  = rawSteps.filter(s => s.status === 'manual').reduce((s, st) => s + (st.recommendation?.hourlySaving ?? 0), 0)
-  const avgScore  = Math.round(rawSteps.reduce((s, st) => s + getScore(st.status, st.weeklyHours), 0) / (rawSteps.length || 1))
+  const manualHrs  = rawSteps.filter(s => s.status === 'manual').reduce((s, st) => s + st.weeklyHours, 0)
+  const savedHrs   = rawSteps.filter(s => s.status === 'manual').reduce((s, st) => s + (st.recommendation?.hourlySaving ?? 0), 0)
+  const avgScore   = Math.round(rawSteps.reduce((s, st) => s + getScore(st.status, st.weeklyHours), 0) / (rawSteps.length || 1))
   const bottleneckCount = workflow.bottlenecks?.length ?? 0
 
   return (
@@ -167,7 +171,7 @@ export default function WorkflowDrillDown() {
       <div className="flex-shrink-0 px-8 pt-5 pb-0 bg-base border-b border-white/[0.05]">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 mb-4">
-          <button onClick={() => navigate('/')}
+          <button onClick={() => navigate('/workflows')}
             className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition-colors font-medium">
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -206,13 +210,13 @@ export default function WorkflowDrillDown() {
         {/* Metrics strip */}
         <div className="flex items-center gap-4 py-3 mt-2 border-t border-white/[0.04]">
           {[
-            { label: 'AI Adoption',     value: `${workflow.aiScore}%`,    accent: true  },
-            { label: 'Opt. Score',      value: `${avgScore}/100`,         accent: true  },
-            { label: 'Manual hrs/wk',   value: `${manualHrs}h`,           accent: false },
-            { label: 'Hrs saved/mo',    value: `${(savedHrs * 4).toFixed(0)}h`, accent: false },
-            { label: 'Conversion',      value: `${workflow.conversionRate}%`, accent: false },
-            { label: 'Cycle time',      value: `${workflow.avgCycleTimeDays}d`, accent: false },
-            { label: 'Bottlenecks',     value: bottleneckCount,           accent: bottleneckCount > 0 },
+            { label: 'AI Adoption',    value: `${workflow.aiScore}%`,    accent: true  },
+            { label: 'Opt. Score',     value: `${avgScore}/100`,         accent: true  },
+            { label: 'Manual hrs/wk',  value: `${manualHrs}h`,           accent: false },
+            { label: 'Potential/mo',   value: `${(savedHrs * 4).toFixed(0)}h saved`, accent: false },
+            { label: 'Conversion',     value: `${workflow.conversionRate}%`, accent: false },
+            { label: 'Cycle time',     value: `${workflow.avgCycleTimeDays}d`, accent: false },
+            { label: 'Bottlenecks',    value: bottleneckCount,           accent: bottleneckCount > 0 },
           ].map(({ label, value, accent }) => (
             <div key={label} className="flex items-center gap-2">
               <div>
@@ -266,7 +270,12 @@ export default function WorkflowDrillDown() {
               onEdgesChange={onEdgesChange}
               onConnect={onConnect}
               nodeTypes={nodeTypes}
-              onNodeClick={(_, node) => setSelectedNodeId(prev => prev === node.id ? null : node.id)}
+              onNodeDragStart={() => { draggingRef.current = true }}
+              onNodeDragStop={() => { setTimeout(() => { draggingRef.current = false }, 0) }}
+              onNodeClick={(_, node) => {
+                if (draggingRef.current) return
+                setSelectedNodeId(prev => prev === node.id ? null : node.id)
+              }}
               onPaneClick={() => setSelectedNodeId(null)}
               fitView
               fitViewOptions={{ padding: 0.25 }}
@@ -300,10 +309,55 @@ export default function WorkflowDrillDown() {
                   background: '#141720',
                   border: '1px solid rgba(255,255,255,0.06)',
                   borderRadius: 10,
+                  bottom: selectedNodeId ? 16 : 16,
+                  right: selectedNodeId ? 356 : 16,
                 }}
               />
 
-              {/* Legend */}
+              {/* Fix #11: empty state */}
+              {nodes.length === 0 && (
+                <Panel position="top-center">
+                  <div className="flex flex-col items-center gap-3 mt-20 text-center">
+                    <div className="w-12 h-12 rounded-xl bg-white/[0.04] border border-white/[0.06] flex items-center justify-center">
+                      <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="rgba(255,255,255,0.2)" strokeWidth="1.5">
+                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                        <path d="M12 8v8M8 12h8" strokeLinecap="round"/>
+                      </svg>
+                    </div>
+                    <p className="text-sm font-semibold text-white/30">No steps yet</p>
+                    <p className="text-xs text-white/20">Use the "Add step" button above to build your workflow</p>
+                  </div>
+                </Panel>
+              )}
+
+              {/* Top Opportunities floating panel */}
+              {workflowOpps.length > 0 && (
+                <Panel position="top-left">
+                  <div className="bg-sidebar border border-white/[0.08] rounded-xl p-3 shadow-xl mt-2 ml-2" style={{ width: 240 }}>
+                    <p className="text-[10px] font-semibold text-white/25 uppercase tracking-widest mb-2.5">
+                      Top opportunities
+                    </p>
+                    <div className="space-y-1.5">
+                      {workflowOpps.slice(0, 3).map((opp, i) => (
+                        <div key={i} className="flex items-center gap-2.5 py-1.5 border-b border-white/[0.04] last:border-0">
+                          <span className="font-mono text-xs font-semibold text-teal w-12 flex-shrink-0">
+                            ${(opp.annualSaving / 1000).toFixed(0)}k/yr
+                          </span>
+                          <div className="min-w-0">
+                            <p className="text-xs text-white/70 font-medium leading-tight truncate">{opp.stepName}</p>
+                            <p className="text-[9px] text-white/30 truncate">{opp.tool}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {workflowOpps.length > 3 && (
+                      <p className="text-[10px] text-white/20 mt-2">+{workflowOpps.length - 3} more</p>
+                    )}
+                  </div>
+                </Panel>
+              )}
+
+              {/* Legend — fix #17: corrected hint text */}
               <Panel position="bottom-center">
                 <div className="flex items-center gap-5 px-4 py-2 bg-card border border-white/[0.06] rounded-xl mb-4 text-[10px] text-white/30">
                   {[
@@ -317,7 +371,7 @@ export default function WorkflowDrillDown() {
                     </div>
                   ))}
                   <span className="text-white/15">·</span>
-                  <span>Dbl-click node to rename · Drag to reposition · ↓% = drop-off</span>
+                  <span>Click to inspect · Double-click to rename · ↓% = drop-off</span>
                 </div>
               </Panel>
             </ReactFlow>

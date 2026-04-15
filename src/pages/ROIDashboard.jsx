@@ -1,9 +1,9 @@
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
-  BarChart, Bar, Legend,
+  BarChart, Bar,
 } from 'recharts'
-import { roiSummary, workflows, workflowSteps, departmentBreakdown, industryBenchmarks } from '../data/mockData'
+import { roiSummary, workflows, workflowSteps, departmentBreakdown, industryBenchmarks, topOpportunities, weeklyInsights } from '../data/mockData'
 import MetricHero from '../components/MetricHero'
 
 const trendData = roiSummary.weeklyTrend.map((v, i) => ({ week: `W${i + 1}`, score: v }))
@@ -16,33 +16,29 @@ const healthCounts = {
 const donutData = Object.entries(healthCounts).map(([name, value]) => ({ name, value }))
 const DONUT_COLORS = ['#00C9A7', '#F59E0B', '#EF4444']
 
-// Derive stacked bar data from step-level data
+// Fix #7: stacked bar — ensure segments sum to 100%
 const efficiencyData = workflows.map(wf => {
   const steps = workflowSteps[wf.id] ?? []
-  const total = steps.length
-  const ai = steps.filter(s => s.status === 'ai').length
-  const partial = steps.filter(s => s.status === 'partial').length
-  const manual = steps.filter(s => s.status === 'manual').length
+  const total = steps.length || 1
+  const aiCount      = steps.filter(s => s.status === 'ai').length
+  const partialCount = steps.filter(s => s.status === 'partial').length
+  const automated = Math.round((aiCount / total) * 100)
+  const partial   = Math.round((partialCount / total) * 100)
+  const manual    = 100 - automated - partial  // remainder ensures sum = 100
   return {
     name: wf.name.split(' ')[0],
-    Automated: Math.round((ai / total) * 100),
-    Partial: Math.round((partial / total) * 100),
-    Manual: Math.round((manual / total) * 100),
+    Automated: automated,
+    Partial: partial,
+    Manual: manual,
   }
 })
 
-const topRecs = [
-  { label: 'Automate follow-up sequences', dept: 'Sales', saving: 18200 },
-  { label: 'AI-assisted resume screening', dept: 'HR', saving: 18200 },
-  { label: 'Automate invoice data extraction', dept: 'Finance', saving: 15600 },
-]
-
-const weeklyInsights = [
-  'Invoice Processing remains the lowest-scored workflow at 30% — 4 of 6 steps are fully manual.',
-  'HR Recruiting Pipeline has the most manual steps (6) and highest time cost at 30 hrs/week.',
-  'Customer Onboarding reached 80% AI adoption — the best-performing workflow this period.',
-  'Company-wide AI adoption rose 3 points to 55% over the last 4 weeks.',
-]
+// Fix #14: derive top recs from topOpportunities
+const derivedTopRecs = topOpportunities.slice(0, 3).map(opp => ({
+  label: `Automate ${opp.stepName}`,
+  dept: opp.dept,
+  saving: opp.annualSaving,
+}))
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null
@@ -72,6 +68,16 @@ const BarTooltip = ({ active, payload, label }) => {
   )
 }
 
+const DonutTooltip = ({ active, payload }) => {
+  if (!active || !payload?.length) return null
+  return (
+    <div className="bg-card border border-white/10 rounded-lg px-3 py-2 text-xs shadow-xl">
+      <p className="text-white/50 mb-0.5">{payload[0].name}</p>
+      <p className="font-mono font-semibold text-white/80">{payload[0].value} workflow{payload[0].value !== 1 ? 's' : ''}</p>
+    </div>
+  )
+}
+
 function BenchmarkPanel() {
   const entries = Object.values(industryBenchmarks)
   return (
@@ -86,6 +92,11 @@ function BenchmarkPanel() {
             ? ((b.industry - b.yours) / b.industry * 100).toFixed(0)
             : ((b.yours - b.industry) / b.industry * 100).toFixed(0)
           const absDelta = Math.abs(Number(delta))
+
+          // Fix #8: invert bar width for lowerIsBetter metrics
+          const barWidth = b.lowerIsBetter
+            ? Math.min((b.industry / (b.yours || 0.1)) * 100, 100)
+            : Math.min((b.yours / (b.industry * 1.4)) * 100, 100)
 
           return (
             <div key={b.label}>
@@ -103,7 +114,7 @@ function BenchmarkPanel() {
                 <div className="flex-1 bg-white/[0.04] rounded-full h-1.5 overflow-hidden">
                   <div
                     className="h-full rounded-full bg-teal transition-all"
-                    style={{ width: `${Math.min((b.yours / (b.industry * 1.4)) * 100, 100)}%` }}
+                    style={{ width: `${barWidth}%` }}
                   />
                 </div>
                 <div className="flex items-center gap-2 text-[10px] font-mono flex-shrink-0">
@@ -120,11 +131,81 @@ function BenchmarkPanel() {
   )
 }
 
+function BeforeAfterSection() {
+  const improved = workflows.filter(w => w.baseline && w.aiScore > w.baseline.aiScore)
+  const totalAiGain = workflows.reduce((sum, w) => sum + (w.baseline ? w.aiScore - w.baseline.aiScore : 0), 0)
+  const totalHrsSaved = workflows.reduce((sum, w) => sum + (w.baseline ? w.baseline.weeklyHours - w.weeklyHours : 0), 0)
+
+  return (
+    <div className="bg-card border border-white/[0.06] rounded-xl p-6">
+      <div className="flex items-center justify-between mb-5">
+        <p className="text-[10px] font-semibold text-white/25 uppercase tracking-widest">Before / After — 8 weeks</p>
+        <div className="flex items-center gap-4 text-xs font-mono">
+          <span className="text-teal font-semibold">+{totalAiGain}pp AI adoption</span>
+          <span className="text-white/30">·</span>
+          <span className="text-teal font-semibold">{totalHrsSaved}h/wk reclaimed</span>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        {workflows.filter(w => w.baseline).map(w => {
+          const aiDelta = w.aiScore - w.baseline.aiScore
+          const hrsDelta = w.baseline.weeklyHours - w.weeklyHours
+          const improved = aiDelta > 0
+          const pct = w.aiScore
+
+          return (
+            <div key={w.id} className="flex items-center gap-4">
+              <div className="w-36 flex-shrink-0">
+                <p className="text-xs font-medium text-white/70 truncate">{w.name}</p>
+              </div>
+              <div className="flex-1 relative h-4 bg-white/[0.04] rounded-full overflow-hidden">
+                {/* Baseline bar */}
+                <div
+                  className="absolute left-0 top-0 h-full rounded-full bg-white/[0.08]"
+                  style={{ width: `${w.baseline.aiScore}%` }}
+                />
+                {/* Current bar */}
+                <div
+                  className={`absolute left-0 top-0 h-full rounded-full transition-all ${
+                    pct >= 70 ? 'bg-teal' : pct >= 40 ? 'bg-amber-400' : 'bg-red-400'
+                  }`}
+                  style={{ width: `${pct}%`, opacity: 0.7 }}
+                />
+              </div>
+              <div className="flex items-center gap-2 text-[10px] font-mono flex-shrink-0 w-28 justify-end">
+                <span className="text-white/30">{w.baseline.aiScore}%</span>
+                <span className="text-white/15">→</span>
+                <span className={improved ? 'text-teal font-semibold' : 'text-white/50'}>{w.aiScore}%</span>
+                {aiDelta !== 0 && (
+                  <span className={`text-[9px] font-semibold ${aiDelta > 0 ? 'text-teal' : 'text-red-400'}`}>
+                    {aiDelta > 0 ? '+' : ''}{aiDelta}pp
+                  </span>
+                )}
+              </div>
+              <div className="text-[10px] font-mono text-white/25 w-20 text-right flex-shrink-0">
+                {hrsDelta > 0 ? (
+                  <span className="text-teal">{hrsDelta}h saved</span>
+                ) : hrsDelta < 0 ? (
+                  <span className="text-red-400">{Math.abs(hrsDelta)}h added</span>
+                ) : (
+                  <span>no change</span>
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+      <p className="text-[10px] text-white/15 mt-4">Baseline captured 8 weeks ago · Current = live data</p>
+    </div>
+  )
+}
+
 export default function ROIDashboard() {
   return (
     <div>
       <div className="mb-7">
-        <h1 className="text-lg font-semibold text-white/90 tracking-tight">ROI Dashboard</h1>
+        <h1 className="text-lg font-semibold text-white/90 tracking-tight">ROI / Impact</h1>
         <p className="text-sm text-white/30 mt-0.5">Company-wide AI optimisation impact</p>
       </div>
 
@@ -142,7 +223,7 @@ export default function ROIDashboard() {
         <MetricHero label="AI adoption score" value={`${roiSummary.currentAiScore}%`} sub="Company-wide average" accent />
       </div>
 
-      {/* Charts row — trend | stacked bar | donut */}
+      {/* Charts row */}
       <div className="grid grid-cols-3 gap-3 mb-5">
         {/* Trend */}
         <div className="bg-card border border-white/[0.06] rounded-xl p-5">
@@ -180,14 +261,15 @@ export default function ROIDashboard() {
           </div>
         </div>
 
-        {/* Donut */}
+        {/* Donut — fix #6: cx=60, fix #22: add Tooltip */}
         <div className="bg-card border border-white/[0.06] rounded-xl p-5 flex flex-col">
           <p className="text-[10px] font-semibold text-white/25 uppercase tracking-widest mb-3">Workflow health</p>
           <div className="flex-1 flex items-center justify-center">
             <PieChart width={120} height={120}>
-              <Pie data={donutData} cx={55} cy={55} innerRadius={34} outerRadius={52} dataKey="value" startAngle={90} endAngle={-270} strokeWidth={0}>
+              <Pie data={donutData} cx={60} cy={55} innerRadius={34} outerRadius={52} dataKey="value" startAngle={90} endAngle={-270} strokeWidth={0}>
                 {donutData.map((_, i) => <Cell key={i} fill={DONUT_COLORS[i]} />)}
               </Pie>
+              <Tooltip content={<DonutTooltip />} />
             </PieChart>
           </div>
           <div className="space-y-2">
@@ -204,12 +286,17 @@ export default function ROIDashboard() {
         </div>
       </div>
 
+      {/* Before / After */}
+      <div className="mb-5">
+        <BeforeAfterSection />
+      </div>
+
       {/* Top recs + dept table */}
       <div className="grid grid-cols-2 gap-3 mb-5">
         <div className="bg-card border border-white/[0.06] rounded-xl p-6">
           <p className="text-[10px] font-semibold text-white/25 uppercase tracking-widest mb-4">Top ROI recommendations</p>
           <div className="space-y-2">
-            {topRecs.map((rec, i) => (
+            {derivedTopRecs.map((rec, i) => (
               <div key={i} className="flex items-center gap-3 p-3 bg-white/[0.02] border border-white/[0.04] rounded-xl hover:bg-white/[0.04] transition-colors">
                 <span className="font-mono text-xs font-semibold text-white/15 w-4 flex-shrink-0">{String(i + 1).padStart(2, '0')}</span>
                 <div className="flex-1 min-w-0">
@@ -261,6 +348,7 @@ export default function ROIDashboard() {
               This week
             </span>
           </div>
+          {/* Fix #15: weeklyInsights derived from data */}
           <ul className="space-y-3">
             {weeklyInsights.map((insight, i) => (
               <li key={i} className="flex items-start gap-3">

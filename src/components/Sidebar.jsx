@@ -3,7 +3,8 @@ import { NavLink } from 'react-router-dom'
 const nav = [
   {
     to: '/',
-    label: 'Workflows',
+    end: true,
+    label: 'Dashboard',
     icon: (
       <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
         <rect x="3" y="3" width="7" height="7" rx="1.5" />
@@ -14,11 +15,34 @@ const nav = [
     ),
   },
   {
+    to: '/workflows',
+    end: true,
+    label: 'Workflows',
+    icon: (
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 12h4l3-9 4 18 3-9h4" />
+      </svg>
+    ),
+  },
+  {
     to: '/roi',
-    label: 'ROI Dashboard',
+    end: false,
+    label: 'ROI / Impact',
     icon: (
       <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
         <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+      </svg>
+    ),
+  },
+  {
+    to: '/data-sources',
+    end: false,
+    label: 'Data Sources',
+    icon: (
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+        <ellipse cx="12" cy="5" rx="9" ry="3" />
+        <path d="M21 12c0 1.66-4.03 3-9 3S3 13.66 3 12" />
+        <path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5" />
       </svg>
     ),
   },
@@ -35,7 +59,7 @@ export default function Sidebar() {
             </svg>
           </div>
           <div>
-            <span className="text-white font-semibold text-sm leading-none">Clearflow</span>
+            <span className="text-white font-semibold text-sm leading-none">Clearlane</span>
           </div>
         </div>
       </div>
@@ -45,11 +69,11 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex-1 px-3 space-y-0.5">
-        {nav.map(({ to, label, icon }) => (
+        {nav.map(({ to, end, label, icon }) => (
           <NavLink
             key={to}
             to={to}
-            end={to === '/'}
+            end={end}
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
                 isActive
