@@ -1,232 +1,331 @@
+import { useCallback, useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import {
+  ReactFlow, Background, Controls, MiniMap,
+  BackgroundVariant, addEdge, useNodesState, useEdgesState,
+  Panel,
+} from '@xyflow/react'
+import '@xyflow/react/dist/style.css'
 import { workflows, workflowSteps } from '../data/mockData'
-import StepCard from '../components/StepCard'
 import StatusBadge from '../components/StatusBadge'
+import WorkflowNode from '../components/canvas/WorkflowNode'
+import NodePanel from '../components/canvas/NodePanel'
+import DataSourcesTab from '../components/canvas/DataSourcesTab'
 
-const severityConfig = {
-  high: { label: 'High', classes: 'bg-red-500/10 text-red-400 border-red-500/20' },
-  medium: { label: 'Medium', classes: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
-  low: { label: 'Low', classes: 'bg-white/5 text-white/40 border-white/10' },
+const nodeTypes = { workflowNode: WorkflowNode }
+
+function getScore(status, weeklyHours = 4) {
+  if (status === 'ai')      return Math.min(96, 80 + Math.round((10 - Math.min(weeklyHours, 10)) * 1.6))
+  if (status === 'partial') return Math.min(68, 38 + Math.round((8  - Math.min(weeklyHours, 8))  * 3))
+  return Math.max(5, 32 - Math.round(weeklyHours * 1.8))
 }
+
+function edgeColor(status) {
+  if (status === 'manual')  return '#EF4444'
+  if (status === 'partial') return '#F59E0B'
+  return 'rgba(0,201,167,0.45)'
+}
+
+function buildFlow(steps, bottlenecks, showBottlenecks, onRename, onDelete) {
+  const bottleneckStepNames = new Set(bottlenecks?.map(b => b.step) ?? [])
+
+  const nodes = steps.map((step, i) => ({
+    id: String(step.id),
+    type: 'workflowNode',
+    position: { x: i * 290, y: 120 },
+    data: {
+      ...step,
+      isBottleneck: bottleneckStepNames.has(step.name),
+      onRename,
+      onDelete,
+    },
+    style: showBottlenecks && !bottleneckStepNames.has(step.name)
+      ? { opacity: 0.3 } : {},
+  }))
+
+  const edges = steps.slice(0, -1).map((step, i) => {
+    const next = steps[i + 1]
+    const color = edgeColor(next.status)
+    return {
+      id: `e${step.id}-${next.id}`,
+      source: String(step.id),
+      target: String(next.id),
+      animated: step.status === 'ai' && next.status === 'ai',
+      label: step.dropoffPct != null ? `↓${step.dropoffPct}%` : undefined,
+      labelStyle: { fill: '#EF4444', fontSize: 9, fontFamily: 'JetBrains Mono', fontWeight: 600 },
+      labelBgStyle: { fill: 'transparent' },
+      style: {
+        stroke: color,
+        strokeWidth: 1.5,
+        strokeDasharray: next.status === 'manual' ? '5 4' : undefined,
+      },
+    }
+  })
+
+  return { nodes, edges }
+}
+
+let newNodeCounter = 100
 
 export default function WorkflowDrillDown() {
   const { id } = useParams()
   const navigate = useNavigate()
   const workflow = workflows.find(w => w.id === Number(id))
-  const steps = workflowSteps[Number(id)] ?? []
+  const rawSteps = workflowSteps[Number(id)] ?? []
+
+  const [activeTab,       setActiveTab]       = useState('canvas')
+  const [selectedNodeId,  setSelectedNodeId]  = useState(null)
+  const [showBottlenecks, setShowBottlenecks] = useState(false)
+
+  // Rename handler — updates node data.name in place
+  const handleRename = useCallback((nodeId, newName) => {
+    setNodes(ns => ns.map(n =>
+      n.id === nodeId ? { ...n, data: { ...n.data, name: newName } } : n
+    ))
+  }, [])
+
+  // Delete handler
+  const handleDelete = useCallback((nodeId) => {
+    setNodes(ns => ns.filter(n => n.id !== nodeId))
+    setEdges(es => es.filter(e => e.source !== nodeId && e.target !== nodeId))
+    setSelectedNodeId(null)
+  }, [])
+
+  const { nodes: initNodes, edges: initEdges } = useMemo(() =>
+    buildFlow(rawSteps, workflow?.bottlenecks, false, handleRename, handleDelete),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [id]
+  )
+
+  const [nodes, setNodes, onNodesChange] = useNodesState(initNodes)
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initEdges)
+
+  // Re-apply bottleneck filter when toggle changes
+  const visibleNodes = useMemo(() => {
+    const bottleneckNames = new Set(workflow?.bottlenecks?.map(b => b.step) ?? [])
+    return nodes.map(n => ({
+      ...n,
+      style: showBottlenecks && !bottleneckNames.has(n.data.name)
+        ? { opacity: 0.25, transition: 'opacity 0.2s' }
+        : { opacity: 1, transition: 'opacity 0.2s' },
+    }))
+  }, [nodes, showBottlenecks, workflow])
+
+  const onConnect = useCallback((params) =>
+    setEdges(es => addEdge({ ...params, style: { stroke: 'rgba(0,201,167,0.4)', strokeWidth: 1.5 } }, es)),
+    [setEdges]
+  )
+
+  const addNode = useCallback(() => {
+    newNodeCounter++
+    const lastNode = nodes[nodes.length - 1]
+    const x = lastNode ? lastNode.position.x + 290 : 0
+    const newNode = {
+      id: String(newNodeCounter),
+      type: 'workflowNode',
+      position: { x, y: 120 },
+      data: {
+        name: 'New Step',
+        tool: 'Manual',
+        status: 'manual',
+        weeklyHours: 0,
+        description: 'Describe what happens in this step',
+        onRename: handleRename,
+        onDelete: handleDelete,
+      },
+    }
+    setNodes(ns => [...ns, newNode])
+  }, [nodes, handleRename, handleDelete, setNodes])
 
   if (!workflow) {
     return <div className="flex items-center justify-center h-64 text-white/30">Workflow not found.</div>
   }
 
-  const actionableSteps = steps.filter(s => s.status === 'manual' && s.recommendation)
-  const totalAnnualSaving = actionableSteps.reduce((sum, s) => sum + (s.recommendation?.annualSaving ?? 0), 0)
-  const totalHourlySaving = actionableSteps.reduce((sum, s) => sum + (s.recommendation?.hourlySaving ?? 0), 0)
-  const recommendedTools = [...new Set(actionableSteps.map(s => s.recommendation?.tool).filter(Boolean))]
+  const selectedStep = selectedNodeId
+    ? rawSteps.find(s => String(s.id) === selectedNodeId) ??
+      nodes.find(n => n.id === selectedNodeId)?.data
+    : null
 
-  const aiCount = steps.filter(s => s.status === 'ai').length
-  const partialCount = steps.filter(s => s.status === 'partial').length
-  const manualCount = steps.filter(s => s.status === 'manual').length
-
-  const efficiencyGain = workflow.weeklyHours > 0
-    ? Math.round((totalHourlySaving / workflow.weeklyHours) * 100)
-    : 0
-
-  const worstBottleneck = workflow.bottlenecks?.[0]
+  // Top metrics
+  const manualHrs = rawSteps.filter(s => s.status === 'manual').reduce((s, st) => s + st.weeklyHours, 0)
+  const savedHrs  = rawSteps.filter(s => s.status === 'manual').reduce((s, st) => s + (st.recommendation?.hourlySaving ?? 0), 0)
+  const avgScore  = Math.round(rawSteps.reduce((s, st) => s + getScore(st.status, st.weeklyHours), 0) / (rawSteps.length || 1))
+  const bottleneckCount = workflow.bottlenecks?.length ?? 0
 
   return (
-    <div>
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-2 mb-7">
-        <button
-          onClick={() => navigate('/')}
-          className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition-colors font-medium"
-        >
-          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-          </svg>
-          Workflows
-        </button>
-        <span className="text-white/15 text-xs">/</span>
-        <span className="text-xs text-white/50 font-medium">{workflow.name}</span>
-      </div>
-
-      {/* Header */}
-      <div className="flex items-start justify-between mb-5">
-        <div>
-          <h1 className="text-lg font-semibold text-white/90 tracking-tight">{workflow.name}</h1>
-          <p className="text-sm text-white/30 mt-0.5">{workflow.department}</p>
+    <div className="flex flex-col" style={{ height: '100vh' }}>
+      {/* Top bar */}
+      <div className="flex-shrink-0 px-8 pt-5 pb-0 bg-base border-b border-white/[0.05]">
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-2 mb-4">
+          <button onClick={() => navigate('/')}
+            className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition-colors font-medium">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+            Workflows
+          </button>
+          <span className="text-white/15 text-xs">/</span>
+          <span className="text-xs text-white/50 font-medium">{workflow.name}</span>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-4 bg-card border border-white/[0.06] rounded-xl px-5 py-3">
-            <div className="text-center">
-              <p className="font-mono text-xl font-semibold text-teal leading-none">{workflow.aiScore}%</p>
-              <p className="text-[10px] text-white/30 mt-1">AI Adoption</p>
+
+        {/* Title + tabs */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-end gap-4">
+            <div>
+              <h1 className="text-lg font-semibold text-white/90 tracking-tight leading-none mb-1">
+                {workflow.name}
+              </h1>
+              <p className="text-xs text-white/30">{workflow.department}</p>
             </div>
-            <div className="w-px h-8 bg-white/[0.06]" />
-            <div className="flex gap-3 text-center">
-              <div>
-                <p className="font-mono text-sm font-semibold text-teal">{aiCount}</p>
-                <p className="text-[10px] text-white/25">AI</p>
-              </div>
-              <div>
-                <p className="font-mono text-sm font-semibold text-amber-400">{partialCount}</p>
-                <p className="text-[10px] text-white/25">Partial</p>
-              </div>
-              <div>
-                <p className="font-mono text-sm font-semibold text-red-400">{manualCount}</p>
-                <p className="text-[10px] text-white/25">Manual</p>
-              </div>
-            </div>
-            <div className="w-px h-8 bg-white/[0.06]" />
-            <div className="text-center">
-              <p className="font-mono text-sm font-semibold text-white/70">{workflow.conversionRate}%</p>
-              <p className="text-[10px] text-white/25">Conversion</p>
-            </div>
-            <div className="text-center">
-              <p className="font-mono text-sm font-semibold text-white/70">{workflow.avgCycleTimeDays}d</p>
-              <p className="text-[10px] text-white/25">Cycle Time</p>
+            <div className="flex items-center gap-1 mb-0.5">
+              {['canvas', 'data-sources'].map(tab => (
+                <button key={tab} onClick={() => setActiveTab(tab)}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
+                    activeTab === tab
+                      ? 'bg-teal/10 text-teal'
+                      : 'text-white/30 hover:text-white/60 hover:bg-white/[0.04]'
+                  }`}>
+                  {tab === 'canvas' ? 'Canvas' : 'Data Sources'}
+                </button>
+              ))}
             </div>
           </div>
           <StatusBadge status={workflow.status} />
         </div>
-      </div>
 
-      {/* Efficiency gain callout */}
-      {efficiencyGain > 0 && (
-        <div className="flex items-center gap-3 bg-teal/[0.07] border border-teal/20 rounded-xl px-5 py-3.5 mb-5">
-          <div className="w-7 h-7 rounded-lg bg-teal/15 flex items-center justify-center flex-shrink-0">
-            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#00C9A7" strokeWidth="2.5">
-              <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
-              <polyline points="17 6 23 6 23 12" />
-            </svg>
-          </div>
-          <p className="text-sm text-white/70">
-            Applying all recommendations would deliver a{' '}
-            <span className="font-semibold text-teal">{efficiencyGain}% efficiency gain</span>
-            {' '}— saving <span className="font-mono font-semibold text-white/80">{totalHourlySaving}h/week</span> and{' '}
-            <span className="font-mono font-semibold text-teal">${totalAnnualSaving.toLocaleString()}/year</span>.
-          </p>
-        </div>
-      )}
-
-      {/* Pipeline */}
-      <div className="bg-card border border-white/[0.06] rounded-xl p-6 mb-5 overflow-x-auto">
-        <p className="text-[10px] font-semibold text-white/25 uppercase tracking-widest mb-6">
-          Pipeline — {steps.length} steps
-        </p>
-        <div className="flex items-start w-max pb-1">
-          {steps.map((step, i) => (
-            <StepCard
-              key={step.id}
-              step={step}
-              isLast={i === steps.length - 1}
-              nextStatus={steps[i + 1]?.status}
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* Legend */}
-      <div className="flex items-center gap-6 mb-5 px-1">
-        {[
-          { dot: 'bg-teal', label: 'AI-powered' },
-          { dot: 'bg-amber-400', label: 'Partial — amber connector' },
-          { dot: 'bg-red-400', label: 'Manual — red dashed connector' },
-        ].map(({ dot, label }) => (
-          <div key={label} className="flex items-center gap-1.5">
-            <span className={`w-1.5 h-1.5 rounded-full ${dot}`} />
-            <span className="text-[11px] text-white/25">{label}</span>
-          </div>
-        ))}
-        <span className="text-[11px] text-white/25 ml-2">· ↓% on arrow = drop-off rate</span>
-      </div>
-
-      {/* Bottleneck Analysis */}
-      {workflow.bottlenecks?.length > 0 && (
-        <div className="bg-card border border-white/[0.06] rounded-xl p-6 mb-5">
-          <p className="text-[10px] font-semibold text-white/25 uppercase tracking-widest mb-5">
-            Bottleneck analysis
-          </p>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              {workflow.bottlenecks.map((b, i) => {
-                const sc = severityConfig[b.severity]
-                return (
-                  <div key={i} className="flex items-start gap-3 p-3 bg-white/[0.02] border border-white/[0.04] rounded-xl">
-                    <span className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full border flex-shrink-0 mt-0.5 ${sc.classes}`}>
-                      {sc.label}
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-white/80 leading-tight">{b.name}</p>
-                      <p className="text-[11px] text-white/35 mt-0.5">{b.impact} · <span className="text-white/25">{b.step}</span></p>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-
-            {/* Worst bottleneck callout */}
-            {worstBottleneck && (
-              <div className="bg-red-500/[0.06] border border-red-500/15 rounded-xl p-4 flex flex-col justify-between">
-                <div>
-                  <p className="text-[10px] font-semibold text-red-400/70 uppercase tracking-widest mb-2">
-                    Primary bottleneck
-                  </p>
-                  <p className="text-base font-semibold text-white/80 leading-snug mb-1">{worstBottleneck.name}</p>
-                  <p className="text-sm text-white/35">{worstBottleneck.impact}</p>
-                </div>
-                {actionableSteps.find(s => s.name === worstBottleneck.step || s.name.includes(worstBottleneck.step.split(' ')[0])) && (
-                  <div className="mt-4 pt-3 border-t border-red-500/10">
-                    <p className="text-[10px] text-white/30 mb-1">Recommended fix</p>
-                    <p className="text-sm font-semibold text-teal">
-                      {actionableSteps.find(s => s.name === worstBottleneck.step || s.name.includes(worstBottleneck.step.split(' ')[0]))?.recommendation?.tool}
-                    </p>
-                  </div>
-                )}
+        {/* Metrics strip */}
+        <div className="flex items-center gap-4 py-3 mt-2 border-t border-white/[0.04]">
+          {[
+            { label: 'AI Adoption',     value: `${workflow.aiScore}%`,    accent: true  },
+            { label: 'Opt. Score',      value: `${avgScore}/100`,         accent: true  },
+            { label: 'Manual hrs/wk',   value: `${manualHrs}h`,           accent: false },
+            { label: 'Hrs saved/mo',    value: `${(savedHrs * 4).toFixed(0)}h`, accent: false },
+            { label: 'Conversion',      value: `${workflow.conversionRate}%`, accent: false },
+            { label: 'Cycle time',      value: `${workflow.avgCycleTimeDays}d`, accent: false },
+            { label: 'Bottlenecks',     value: bottleneckCount,           accent: bottleneckCount > 0 },
+          ].map(({ label, value, accent }) => (
+            <div key={label} className="flex items-center gap-2">
+              <div>
+                <p className="text-[9px] text-white/25 uppercase tracking-widest font-semibold leading-none mb-1">{label}</p>
+                <p className={`font-mono text-sm font-semibold leading-none ${accent ? 'text-teal' : 'text-white/70'}`}>
+                  {value}
+                </p>
               </div>
+              <div className="w-px h-6 bg-white/[0.06] ml-2" />
+            </div>
+          ))}
+
+          {/* Filters */}
+          <div className="flex items-center gap-2 ml-auto">
+            <span className="text-[10px] text-white/20 font-mono">Last 30 days</span>
+            <div className="w-px h-4 bg-white/[0.06]" />
+            <button
+              onClick={() => setShowBottlenecks(v => !v)}
+              className={`flex items-center gap-1.5 text-[10px] font-semibold px-2.5 py-1.5 rounded-lg border transition-all ${
+                showBottlenecks
+                  ? 'bg-red-500/10 text-red-400 border-red-500/20'
+                  : 'text-white/30 border-white/[0.08] hover:border-white/20 hover:text-white/50'
+              }`}
+            >
+              <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                <circle cx="6" cy="6" r="4" stroke="currentColor" strokeWidth="1.5"/>
+                <path d="M6 4v2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                <circle cx="6" cy="8.5" r="0.6" fill="currentColor"/>
+              </svg>
+              Bottlenecks only
+            </button>
+            <button onClick={addNode}
+              className="flex items-center gap-1.5 text-[10px] font-semibold px-2.5 py-1.5 rounded-lg border border-white/[0.08] text-white/30 hover:border-teal/30 hover:text-teal transition-all">
+              <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                <path d="M6 2v8M2 6h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+              Add step
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Canvas / Data Sources area */}
+      <div className="flex-1 relative overflow-hidden">
+        {activeTab === 'canvas' ? (
+          <>
+            <ReactFlow
+              nodes={visibleNodes}
+              edges={edges}
+              onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+              onConnect={onConnect}
+              nodeTypes={nodeTypes}
+              onNodeClick={(_, node) => setSelectedNodeId(prev => prev === node.id ? null : node.id)}
+              onPaneClick={() => setSelectedNodeId(null)}
+              fitView
+              fitViewOptions={{ padding: 0.25 }}
+              minZoom={0.2}
+              maxZoom={2}
+              deleteKeyCode="Delete"
+              style={{ background: 'transparent' }}
+            >
+              <Background
+                variant={BackgroundVariant.Dots}
+                gap={24}
+                size={1}
+                color="rgba(255,255,255,0.06)"
+              />
+              <Controls
+                showInteractive={false}
+                style={{
+                  background: '#141720',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                  borderRadius: 10,
+                  overflow: 'hidden',
+                }}
+              />
+              <MiniMap
+                nodeColor={n => {
+                  const s = n.data?.status
+                  return s === 'ai' ? '#00C9A7' : s === 'partial' ? '#F59E0B' : '#EF4444'
+                }}
+                maskColor="rgba(13,15,20,0.8)"
+                style={{
+                  background: '#141720',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                  borderRadius: 10,
+                }}
+              />
+
+              {/* Legend */}
+              <Panel position="bottom-center">
+                <div className="flex items-center gap-5 px-4 py-2 bg-card border border-white/[0.06] rounded-xl mb-4 text-[10px] text-white/30">
+                  {[
+                    ['#00C9A7', 'AI-powered'],
+                    ['#F59E0B', 'Hybrid'],
+                    ['#EF4444', 'Manual'],
+                  ].map(([color, label]) => (
+                    <div key={label} className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: color }} />
+                      {label}
+                    </div>
+                  ))}
+                  <span className="text-white/15">·</span>
+                  <span>Dbl-click node to rename · Drag to reposition · ↓% = drop-off</span>
+                </div>
+              </Panel>
+            </ReactFlow>
+
+            {/* Node detail panel */}
+            {selectedNodeId && (
+              <NodePanel
+                step={selectedStep}
+                workflow={workflow}
+                onClose={() => setSelectedNodeId(null)}
+              />
             )}
-          </div>
-        </div>
-      )}
-
-      {/* Recommendations summary */}
-      {actionableSteps.length > 0 && (
-        <div className="bg-card border border-white/[0.06] rounded-xl p-6">
-          <p className="text-[10px] font-semibold text-white/25 uppercase tracking-widest mb-5">
-            Recommendations summary
-          </p>
-
-          <div className="grid grid-cols-3 gap-3 mb-5">
-            <div className="bg-white/[0.03] border border-white/[0.05] rounded-xl px-5 py-4">
-              <p className="text-[10px] text-white/30 uppercase tracking-wider mb-2">Hours saved / week</p>
-              <p className="font-mono text-2xl font-semibold text-white/90">{totalHourlySaving}h</p>
-            </div>
-            <div className="bg-teal/[0.06] border border-teal/15 rounded-xl px-5 py-4">
-              <p className="text-[10px] text-white/30 uppercase tracking-wider mb-2">Annual savings</p>
-              <p className="font-mono text-2xl font-semibold text-teal">${totalAnnualSaving.toLocaleString()}</p>
-            </div>
-            <div className="bg-white/[0.03] border border-white/[0.05] rounded-xl px-5 py-4">
-              <p className="text-[10px] text-white/30 uppercase tracking-wider mb-2">Tools recommended</p>
-              <p className="font-mono text-2xl font-semibold text-white/90">{recommendedTools.length}</p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-2 mb-5">
-            {recommendedTools.map(tool => (
-              <span key={tool} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-teal/[0.08] text-teal text-[11px] font-medium rounded-full border border-teal/20">
-                <span className="w-1.5 h-1.5 rounded-full bg-teal flex-shrink-0" />
-                {tool}
-              </span>
-            ))}
-          </div>
-
-          <button className="w-full py-3 rounded-xl bg-teal text-sidebar text-sm font-semibold hover:bg-teal/90 transition-colors">
-            Apply All Recommendations
-          </button>
-        </div>
-      )}
+          </>
+        ) : (
+          <DataSourcesTab workflowId={workflow.id} />
+        )}
+      </div>
     </div>
   )
 }

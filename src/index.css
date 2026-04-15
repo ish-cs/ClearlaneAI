@@ -23,3 +23,35 @@ body {
   background: rgba(255,255,255,0.08);
   border-radius: 3px;
 }
+
+/* React Flow overrides */
+.react-flow__controls {
+  box-shadow: none !important;
+}
+.react-flow__controls-button {
+  background: transparent !important;
+  border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+  color: rgba(255,255,255,0.4) !important;
+  fill: rgba(255,255,255,0.4) !important;
+}
+.react-flow__controls-button:hover {
+  background: rgba(255,255,255,0.06) !important;
+}
+.react-flow__controls-button svg {
+  fill: rgba(255,255,255,0.4) !important;
+}
+.react-flow__minimap {
+  box-shadow: none !important;
+}
+.react-flow__edge-path {
+  stroke-width: 1.5;
+}
+.react-flow__handle {
+  transition: transform 0.1s;
+}
+.react-flow__handle:hover {
+  transform: scale(1.4);
+}
+.react-flow__attribution {
+  display: none !important;
+}
