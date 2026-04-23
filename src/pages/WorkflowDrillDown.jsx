@@ -21,9 +21,9 @@ function getScore(status, weeklyHours = 4) {
 }
 
 function edgeColor(status) {
-  if (status === 'manual')  return '#EF4444'
-  if (status === 'partial') return '#F59E0B'
-  return 'rgba(0,201,167,0.45)'
+  if (status === 'manual')  return '#B44040'
+  if (status === 'partial') return '#C4922A'
+  return 'rgba(74,112,98,0.55)'
 }
 
 function buildFlow(steps, bottlenecks, onRename, onDelete) {
@@ -50,7 +50,7 @@ function buildFlow(steps, bottlenecks, onRename, onDelete) {
       target: String(next.id),
       animated: step.status === 'ai' && next.status === 'ai',
       label: step.dropoffPct != null ? `↓${step.dropoffPct}%` : undefined,
-      labelStyle: { fill: '#EF4444', fontSize: 9, fontFamily: 'JetBrains Mono', fontWeight: 600 },
+      labelStyle: { fill: '#B44040', fontSize: 9, fontFamily: 'JetBrains Mono', fontWeight: 600 },
       labelBgStyle: { fill: 'transparent' },
       style: {
         stroke: color,
@@ -150,7 +150,7 @@ export default function WorkflowDrillDown() {
   }, [nodes, handleRename, handleDelete, setNodes])
 
   if (!workflow) {
-    return <div className="flex items-center justify-center h-64 text-white/30">Workflow not found.</div>
+    return <div className="flex items-center justify-center h-64" style={{ color: 'rgba(28,16,8,0.35)' }}>Workflow not found.</div>
   }
 
   // Top opportunities for this workflow
@@ -168,37 +168,44 @@ export default function WorkflowDrillDown() {
   return (
     <div className="flex flex-col" style={{ height: '100vh' }}>
       {/* Top bar */}
-      <div className="flex-shrink-0 px-8 pt-5 pb-0 bg-base border-b border-white/[0.05]">
+      <div className="flex-shrink-0 px-8 pt-5 pb-0" style={{ background: '#F4F0E8', borderBottom: '1px solid rgba(28,16,8,0.09)' }}>
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 mb-4">
           <button onClick={() => navigate('/workflows')}
-            className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition-colors font-medium">
+            className="flex items-center gap-1.5 text-xs font-medium transition-colors"
+            style={{ color: 'rgba(28,16,8,0.40)' }}
+            onMouseEnter={e => e.currentTarget.style.color = 'rgba(28,16,8,0.70)'}
+            onMouseLeave={e => e.currentTarget.style.color = 'rgba(28,16,8,0.40)'}
+          >
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
             </svg>
             Workflows
           </button>
-          <span className="text-white/15 text-xs">/</span>
-          <span className="text-xs text-white/50 font-medium">{workflow.name}</span>
+          <span className="text-xs" style={{ color: 'rgba(28,16,8,0.18)' }}>/</span>
+          <span className="text-xs font-medium" style={{ color: 'rgba(28,16,8,0.55)' }}>{workflow.name}</span>
         </div>
 
         {/* Title + tabs */}
         <div className="flex items-center justify-between">
           <div className="flex items-end gap-4">
             <div>
-              <h1 className="text-lg font-semibold text-white/90 tracking-tight leading-none mb-1">
+              <h1 className="font-serif text-xl font-semibold leading-none mb-1" style={{ color: '#1C1008' }}>
                 {workflow.name}
               </h1>
-              <p className="text-xs text-white/30">{workflow.department}</p>
+              <p className="text-xs" style={{ color: 'rgba(28,16,8,0.40)' }}>{workflow.department}</p>
             </div>
             <div className="flex items-center gap-1 mb-0.5">
               {['canvas', 'data-sources'].map(tab => (
                 <button key={tab} onClick={() => setActiveTab(tab)}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
-                    activeTab === tab
-                      ? 'bg-teal/10 text-teal'
-                      : 'text-white/30 hover:text-white/60 hover:bg-white/[0.04]'
-                  }`}>
+                  className="px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors"
+                  style={activeTab === tab
+                    ? { background: 'rgba(124,82,52,0.10)', color: '#7C5234' }
+                    : { color: 'rgba(28,16,8,0.40)' }
+                  }
+                  onMouseEnter={e => { if (activeTab !== tab) e.currentTarget.style.background = 'rgba(28,16,8,0.04)' }}
+                  onMouseLeave={e => { if (activeTab !== tab) e.currentTarget.style.background = 'transparent' }}
+                >
                   {tab === 'canvas' ? 'Canvas' : 'Data Sources'}
                 </button>
               ))}
@@ -208,7 +215,7 @@ export default function WorkflowDrillDown() {
         </div>
 
         {/* Metrics strip */}
-        <div className="flex items-center gap-4 py-3 mt-2 border-t border-white/[0.04]">
+        <div className="flex items-center gap-4 py-3 mt-2" style={{ borderTop: '1px solid rgba(28,16,8,0.07)' }}>
           {[
             { label: 'AI Adoption',    value: `${workflow.aiScore}%`,    accent: true  },
             { label: 'Opt. Score',     value: `${avgScore}/100`,         accent: true  },
@@ -220,26 +227,26 @@ export default function WorkflowDrillDown() {
           ].map(({ label, value, accent }) => (
             <div key={label} className="flex items-center gap-2">
               <div>
-                <p className="text-[9px] text-white/25 uppercase tracking-widest font-semibold leading-none mb-1">{label}</p>
-                <p className={`font-mono text-sm font-semibold leading-none ${accent ? 'text-teal' : 'text-white/70'}`}>
+                <p className="text-[9px] uppercase tracking-widest font-semibold leading-none mb-1" style={{ color: 'rgba(28,16,8,0.30)' }}>{label}</p>
+                <p className="font-mono text-sm font-semibold leading-none" style={{ color: accent ? '#7C5234' : 'rgba(28,16,8,0.65)' }}>
                   {value}
                 </p>
               </div>
-              <div className="w-px h-6 bg-white/[0.06] ml-2" />
+              <div className="w-px h-6 ml-2" style={{ background: 'rgba(28,16,8,0.08)' }} />
             </div>
           ))}
 
           {/* Filters */}
           <div className="flex items-center gap-2 ml-auto">
-            <span className="text-[10px] text-white/20 font-mono">Last 30 days</span>
-            <div className="w-px h-4 bg-white/[0.06]" />
+            <span className="text-[10px] font-mono" style={{ color: 'rgba(28,16,8,0.28)' }}>Last 30 days</span>
+            <div className="w-px h-4" style={{ background: 'rgba(28,16,8,0.09)' }} />
             <button
               onClick={() => setShowBottlenecks(v => !v)}
-              className={`flex items-center gap-1.5 text-[10px] font-semibold px-2.5 py-1.5 rounded-lg border transition-all ${
-                showBottlenecks
-                  ? 'bg-red-500/10 text-red-400 border-red-500/20'
-                  : 'text-white/30 border-white/[0.08] hover:border-white/20 hover:text-white/50'
-              }`}
+              className="flex items-center gap-1.5 text-[10px] font-semibold px-2.5 py-1.5 rounded-lg transition-all"
+              style={showBottlenecks
+                ? { background: 'rgba(180,64,64,0.08)', color: '#B44040', border: '1px solid rgba(180,64,64,0.18)' }
+                : { color: 'rgba(28,16,8,0.40)', border: '1px solid rgba(28,16,8,0.09)' }
+              }
             >
               <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
                 <circle cx="6" cy="6" r="4" stroke="currentColor" strokeWidth="1.5"/>
@@ -249,7 +256,11 @@ export default function WorkflowDrillDown() {
               Bottlenecks only
             </button>
             <button onClick={addNode}
-              className="flex items-center gap-1.5 text-[10px] font-semibold px-2.5 py-1.5 rounded-lg border border-white/[0.08] text-white/30 hover:border-teal/30 hover:text-teal transition-all">
+              className="flex items-center gap-1.5 text-[10px] font-semibold px-2.5 py-1.5 rounded-lg transition-all"
+              style={{ color: 'rgba(28,16,8,0.40)', border: '1px solid rgba(28,16,8,0.09)' }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(124,82,52,0.30)'; e.currentTarget.style.color = '#7C5234' }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(28,16,8,0.09)'; e.currentTarget.style.color = 'rgba(28,16,8,0.40)' }}
+            >
               <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
                 <path d="M6 2v8M2 6h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
               </svg>
@@ -288,13 +299,13 @@ export default function WorkflowDrillDown() {
                 variant={BackgroundVariant.Dots}
                 gap={24}
                 size={1}
-                color="rgba(255,255,255,0.06)"
+                color="rgba(28,16,8,0.07)"
               />
               <Controls
                 showInteractive={false}
                 style={{
-                  background: '#141720',
-                  border: '1px solid rgba(255,255,255,0.06)',
+                  background: '#F4F0E8',
+                  border: '1px solid rgba(28,16,8,0.09)',
                   borderRadius: 10,
                   overflow: 'hidden',
                 }}
@@ -302,12 +313,12 @@ export default function WorkflowDrillDown() {
               <MiniMap
                 nodeColor={n => {
                   const s = n.data?.status
-                  return s === 'ai' ? '#00C9A7' : s === 'partial' ? '#F59E0B' : '#EF4444'
+                  return s === 'ai' ? '#4A7062' : s === 'partial' ? '#C4922A' : '#B44040'
                 }}
-                maskColor="rgba(13,15,20,0.8)"
+                maskColor="rgba(237,233,226,0.75)"
                 style={{
-                  background: '#141720',
-                  border: '1px solid rgba(255,255,255,0.06)',
+                  background: '#EDE9E2',
+                  border: '1px solid rgba(28,16,8,0.09)',
                   borderRadius: 10,
                   bottom: selectedNodeId ? 16 : 16,
                   right: selectedNodeId ? 356 : 16,
@@ -318,14 +329,14 @@ export default function WorkflowDrillDown() {
               {nodes.length === 0 && (
                 <Panel position="top-center">
                   <div className="flex flex-col items-center gap-3 mt-20 text-center">
-                    <div className="w-12 h-12 rounded-xl bg-white/[0.04] border border-white/[0.06] flex items-center justify-center">
-                      <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="rgba(255,255,255,0.2)" strokeWidth="1.5">
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: 'rgba(28,16,8,0.04)', border: '1px solid rgba(28,16,8,0.08)' }}>
+                      <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="rgba(28,16,8,0.25)" strokeWidth="1.5">
                         <rect x="3" y="3" width="18" height="18" rx="2" />
                         <path d="M12 8v8M8 12h8" strokeLinecap="round"/>
                       </svg>
                     </div>
-                    <p className="text-sm font-semibold text-white/30">No steps yet</p>
-                    <p className="text-xs text-white/20">Use the "Add step" button above to build your workflow</p>
+                    <p className="text-sm font-semibold" style={{ color: 'rgba(28,16,8,0.35)' }}>No steps yet</p>
+                    <p className="text-xs" style={{ color: 'rgba(28,16,8,0.25)' }}>Use the "Add step" button above to build your workflow</p>
                   </div>
                 </Panel>
               )}

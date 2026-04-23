@@ -11,9 +11,9 @@ export default function App() {
   const isCanvas = /^\/workflows\/\d+/.test(location.pathname)
 
   return (
-    <div className="flex min-h-screen bg-base">
+    <div className="flex min-h-screen bg-paper">
       <Sidebar />
-      <main className={`ml-56 flex-1 ${isCanvas ? 'overflow-hidden' : 'p-8 max-w-[1200px]'}`}>
+      <main className={`ml-56 flex-1 ${isCanvas ? 'overflow-hidden' : 'p-8 max-w-[1200px]'}`} style={{ minHeight: '100vh' }}>
         <Routes>
           <Route path="/"               element={<Dashboard />} />
           <Route path="/workflows"      element={<WorkflowList />} />

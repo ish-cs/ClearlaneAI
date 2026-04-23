@@ -1,22 +1,22 @@
 const config = {
   optimized: {
     label: 'Optimized',
-    classes: 'bg-teal/10 text-teal border border-teal/20',
+    style: { background: 'rgba(74,112,98,0.10)', color: '#4A7062', border: '1px solid rgba(74,112,98,0.22)' },
   },
   partial: {
     label: 'Partial',
-    classes: 'bg-amber-500/10 text-amber-400 border border-amber-500/20',
+    style: { background: 'rgba(196,146,42,0.10)', color: '#C4922A', border: '1px solid rgba(196,146,42,0.22)' },
   },
   'needs-attention': {
     label: 'Needs Attention',
-    classes: 'bg-red-500/10 text-red-400 border border-red-500/20',
+    style: { background: 'rgba(180,64,64,0.10)', color: '#B44040', border: '1px solid rgba(180,64,64,0.22)' },
   },
 }
 
 export default function StatusBadge({ status }) {
-  const { label, classes } = config[status] ?? config['partial']
+  const { label, style } = config[status] ?? config['partial']
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${classes}`}>
+    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold" style={style}>
       {label}
     </span>
   )

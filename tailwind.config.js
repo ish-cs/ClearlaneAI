@@ -4,23 +4,42 @@ export default {
   theme: {
     extend: {
       colors: {
-        sidebar: '#080A0F',
-        base: '#0D0F14',
-        card: '#141720',
-        'card-2': '#1A1E2A',
-        teal: {
-          DEFAULT: '#00C9A7',
-          light: 'rgba(0,201,167,0.10)',
-          dim: 'rgba(0,201,167,0.06)',
+        paper:   '#EDE9E2',
+        sidebar: '#E5E1D8',
+        card:    '#FAFAF8',
+        'card-2':'#F4F0E8',
+        ink:     '#1C1008',
+        'ink-2': '#5C3D2E',
+        brown: {
+          DEFAULT: '#7C5234',
+          light:   'rgba(124,82,52,0.10)',
+          dim:     'rgba(124,82,52,0.06)',
+          dark:    '#3C2410',
+        },
+        steel: {
+          DEFAULT: '#3D6080',
+          light:   'rgba(61,96,128,0.10)',
+        },
+        sage: {
+          DEFAULT: '#4A7062',
+          light:   'rgba(74,112,98,0.10)',
+        },
+        rust: {
+          DEFAULT: '#B44040',
+          light:   'rgba(180,64,64,0.10)',
+        },
+        amber: {
+          DEFAULT: '#C4922A',
+          light:   'rgba(196,146,42,0.10)',
         },
       },
       fontFamily: {
-        sans: ['DM Sans', 'sans-serif'],
-        mono: ['JetBrains Mono', 'monospace'],
+        serif: ['"Cormorant Garamond"', 'Georgia', 'serif'],
+        sans:  ['DM Sans', 'sans-serif'],
+        mono:  ['JetBrains Mono', 'monospace'],
       },
       borderColor: {
-        subtle: 'rgba(255,255,255,0.06)',
-        DEFAULT: 'rgba(255,255,255,0.06)',
+        DEFAULT: 'rgba(28,16,8,0.09)',
       },
     },
   },
